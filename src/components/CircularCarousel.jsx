@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 // Carrossel circular em cilindro (inspirado no "Circular Carousel" do React Bits, preset Cylinder):
 // os cartões ficam na parte de dentro de um cilindro, giram sozinhos (drift), podem ser arrastados
-// com inércia, encaixam no cartão mais próximo ao soltar e pausam com o mouse em cima.
+// com inércia e encaixam no cartão mais próximo ao soltar. Passar o mouse por cima não pausa o giro.
 export default function CircularCarousel({
   items,
   cardWidth = 280,
@@ -13,7 +13,7 @@ export default function CircularCarousel({
   direction = -1,      // -1 = para a esquerda
   momentum = 0.6,
   depthFade = 0.55,
-  pauseOnHover = true,
+  pauseOnHover = false,
   visible = true
 }) {
   const stageRef = useRef(null);
