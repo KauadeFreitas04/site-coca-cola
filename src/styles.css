@@ -26,8 +26,8 @@ header {
   padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(16px, 4vw, 48px) 22px;
   background: linear-gradient(to bottom, rgba(5, 1, 1, .75), rgba(5, 1, 1, 0));
 }
-.logo { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 28px; letter-spacing: .02em; color: var(--ink) }
-.logo span { color: var(--red) }
+.logo { display: block; line-height: 0 }
+.logo img { height: 38px; width: auto }
 nav { display: flex; gap: 28px; font-size: 14px; color: var(--muted) }
 nav a { color: inherit; text-decoration: none; transition: color .2s }
 nav a:hover, nav a:focus-visible { color: var(--ink) }
@@ -41,7 +41,7 @@ nav a:hover, nav a:focus-visible { color: var(--ink) }
 .btn.solid { background: var(--red); border-color: var(--red); font-weight: 700 }
 .btn.solid:hover { background: var(--red-hot) }
 a:focus-visible { outline: 2px solid var(--red); outline-offset: 3px }
-@media (max-width: 760px) { nav { display: none } .logo { font-size: 24px } header .btn { padding: 10px 16px } }
+@media (max-width: 760px) { nav { display: none } .logo img { height: 32px } header .btn { padding: 10px 16px } }
 
 main { position: relative; z-index: 5; background: var(--bg) }
 .tag { font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--red); margin-bottom: 22px; display: flex; align-items: center; gap: 12px }
@@ -118,7 +118,8 @@ footer { position: relative; z-index: 5; padding: 40px clamp(16px, 7vw, 110px) c
 
 .loader { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; transition: opacity .9s ease, visibility .9s }
 .loader.done { opacity: 0; visibility: hidden }
-.loader .logo { font-size: 44px }
+.loader-logo { width: min(240px, 60vw); height: auto; animation: logoIn 1.2s cubic-bezier(.2, .7, .2, 1) both }
+@keyframes logoIn { from { opacity: 0; transform: translateY(12px) scale(.96); filter: blur(8px) } }
 .bar { width: 160px; height: 1px; background: rgba(245, 236, 233, .15); overflow: hidden }
 .bar i { display: block; height: 100%; width: 40%; background: var(--red); animation: load 1.1s ease-in-out infinite }
 @keyframes load { 0% { transform: translateX(-100%) } 100% { transform: translateX(260%) } }
