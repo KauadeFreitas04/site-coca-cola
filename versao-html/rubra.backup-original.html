@@ -1,0 +1,716 @@
+<title>Rubra</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,500;1,9..144,800&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* Layout: palco 3D fixo em tela cheia; textos rolam por cima, à esquerda no desktop e embaixo no celular */
+  :root{
+    --bg:#050101;
+    --red:#e3122b;
+    --red-hot:#ff2440;
+    --ink:#f5ece9;
+    --muted:#b9a29e;
+    --line:rgba(245,236,233,.12);
+    --display:"Fraunces", Georgia, "Times New Roman", serif;
+    --body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--body);overflow-x:hidden}
+  canvas#gl{position:fixed;inset:0;width:100vw;height:100vh;z-index:1;display:block;background:var(--bg)}
+  .grain{
+    position:fixed;inset:-50%;z-index:2;pointer-events:none;opacity:.06;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation:grain 1.2s steps(6) infinite;
+  }
+  @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}100%{transform:translate(1%,3%)}}
+
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:calc(22px + env(safe-area-inset-top, 0px)) clamp(16px,4vw,48px) 22px;
+    background:linear-gradient(to bottom, rgba(5,1,1,.75), rgba(5,1,1,0));
+  }
+  .logo{font-family:var(--display);font-style:italic;font-weight:800;font-size:28px;letter-spacing:.02em;color:var(--ink)}
+  .logo span{color:var(--red)}
+  nav{display:flex;gap:28px;font-size:14px;color:var(--muted)}
+  nav a{color:inherit;text-decoration:none;transition:color .2s}
+  nav a:hover,nav a:focus-visible{color:var(--ink)}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:12px 22px;border-radius:999px;border:1px solid rgba(245,236,233,.25);
+    color:var(--ink);text-decoration:none;font-size:14px;font-weight:500;
+    background:rgba(255,255,255,.03);backdrop-filter:blur(8px);transition:all .25s;
+  }
+  .btn:hover,.btn:focus-visible{border-color:var(--red);background:rgba(227,18,43,.12)}
+  .btn.solid{background:var(--red);border-color:var(--red);font-weight:700}
+  .btn.solid:hover{background:var(--red-hot)}
+  a:focus-visible{outline:2px solid var(--red);outline-offset:3px}
+  @media (max-width:760px){ nav{display:none} .logo{font-size:24px} header .btn{padding:10px 16px} }
+
+  .dots{position:fixed;right:clamp(14px,3vw,36px);top:50%;transform:translateY(-50%);z-index:10;display:flex;flex-direction:column;gap:14px}
+  .dot{display:flex;align-items:center;gap:10px;justify-content:flex-end;font-size:11px;letter-spacing:.14em;color:transparent;transition:color .3s}
+  .dot i{width:6px;height:6px;border-radius:50%;background:rgba(245,236,233,.25);transition:all .35s}
+  .dot.on{color:var(--muted)}
+  .dot.on i{background:var(--red);box-shadow:0 0 12px var(--red);transform:scale(1.5)}
+  @media (max-width:760px){ .dots{display:none} }
+
+  .progress{position:fixed;left:0;top:0;height:2px;z-index:11;background:var(--red);width:0;box-shadow:0 0 10px var(--red)}
+
+  main{position:relative;z-index:5}
+  section{min-height:115vh;display:flex;align-items:center;padding:0 clamp(16px,7vw,110px)}
+  .copy{max-width:520px;transition:opacity 1s ease, transform 1s cubic-bezier(.2,.7,.2,1)}
+  .copy.pre{opacity:0;transform:translateY(40px)}
+  .copy.pre.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion: reduce){.copy.pre{opacity:1;transform:none}.grain{animation:none}}
+  .tag{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--red);margin-bottom:22px;display:flex;align-items:center;gap:12px}
+  .tag:before{content:"";width:28px;height:1px;background:var(--red)}
+  h1,h2{font-family:var(--display);font-weight:600;line-height:.98;letter-spacing:-.02em;text-wrap:balance}
+  h1{font-size:clamp(46px,7.4vw,108px)}
+  h2{font-size:clamp(40px,6vw,88px)}
+  h1 em,h2 em{font-style:italic;font-weight:500;color:var(--red)}
+  .copy p{margin-top:24px;font-size:clamp(15px,1.25vw,18px);line-height:1.6;color:var(--muted);max-width:420px}
+  .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+  .hint{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);z-index:10;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);transition:opacity .5s}
+  .hint b{display:block;text-align:center;font-weight:400;margin-top:8px;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(6px)}}
+  .stats{display:flex;gap:36px;margin-top:36px;flex-wrap:wrap}
+  .stats div{font-family:var(--display);font-size:34px;font-style:italic;font-variant-numeric:tabular-nums}
+  .stats small{display:block;font-family:var(--body);font-style:normal;font-size:12px;color:var(--muted);letter-spacing:.08em;margin-top:4px}
+  footer{position:relative;z-index:5;padding:40px clamp(16px,7vw,110px) calc(48px + env(safe-area-inset-bottom, 0px));display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);background:rgba(5,1,1,.7)}
+
+  @media (max-aspect-ratio: 1/1){
+    section{align-items:flex-end;padding-bottom:14vh;min-height:110vh}
+    .copy{max-width:none;background:linear-gradient(to top, rgba(5,1,1,.88), rgba(5,1,1,0));padding-top:48px}
+    .copy p{max-width:none}
+  }
+
+  .loader{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .9s ease, visibility .9s}
+  .loader.done{opacity:0;visibility:hidden}
+  .loader .logo{font-size:44px}
+  .bar{width:160px;height:1px;background:rgba(245,236,233,.15);overflow:hidden}
+  .bar i{display:block;height:100%;width:40%;background:var(--red);animation:load 1.1s ease-in-out infinite}
+  @keyframes load{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+  .loader small{font-size:12px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+</style>
+
+<div class="loader" id="loader">
+  <div class="logo">Rubra<span>.</span></div>
+  <div class="bar"><i></i></div>
+  <small id="loadmsg">Carregando experiência</small>
+</div>
+
+<canvas id="gl"></canvas>
+<div class="grain"></div>
+<div class="progress" id="progress"></div>
+
+<header>
+  <div class="logo">Rubra<span>.</span></div>
+  <nav>
+    <a href="#">Sabores</a><a href="#">Onde comprar</a><a href="#">Nossa história</a><a href="#">Contato</a>
+  </nav>
+  <a class="btn" href="#fim">Peça a sua</a>
+</header>
+
+<div class="dots" id="dots">
+  <div class="dot"><span>ESCURO</span><i></i></div>
+  <div class="dot"><span>REVELAÇÃO</span><i></i></div>
+  <div class="dot"><span>DETALHE</span><i></i></div>
+  <div class="dot"><span>ENERGIA</span><i></i></div>
+  <div class="dot"><span>ABERTURA</span><i></i></div>
+  <div class="dot"><span>RUBRA</span><i></i></div>
+</div>
+
+<div class="hint" id="hint">Role para abrir<b>↓</b></div>
+
+<main>
+  <section>
+    <div class="copy">
+      <div class="tag">01 — Do escuro</div>
+      <h1>Tudo começa<br>no <em>silêncio</em>.</h1>
+      <p>Antes do primeiro gole, existe um instante. Frio, escuro, cheio de expectativa.</p>
+    </div>
+  </section>
+  <section>
+    <div class="copy">
+      <div class="tag">02 — Revelação</div>
+      <h2>Gelada<br>de <em>verdade</em>.</h2>
+      <p>Vidro grosso, gotas escorrendo, a cor que você reconhece de longe.</p>
+    </div>
+  </section>
+  <section>
+    <div class="copy">
+      <div class="tag">03 — Detalhe</div>
+      <h2>Cada gota<br><em>conta</em>.</h2>
+      <p>Condensação real, bolhas finas subindo sem pressa. O frio que dá pra ver.</p>
+    </div>
+  </section>
+  <section>
+    <div class="copy">
+      <div class="tag">04 — Energia</div>
+      <h2>Sinta a<br><em>pressão</em> subir.</h2>
+      <p>Milhares de bolhas esperando o momento certo de sair.</p>
+      <div class="stats">
+        <div>4°C<small>TEMPERATURA IDEAL</small></div>
+        <div>290<small>ML DE VIDRO</small></div>
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="copy">
+      <div class="tag">05 — Abertura</div>
+      <h2>O som que<br>você <em>conhece</em>.</h2>
+      <p>Psssst. A tampa sobe, o gás escapa e o resto do dia fica melhor.</p>
+    </div>
+  </section>
+  <section id="fim">
+    <div class="copy">
+      <div class="tag">06 — Rubra</div>
+      <h1>Abra.<br><em>Sinta</em>.</h1>
+      <p>O refrigerante feito pra quem leva o gelado a sério. Encontre a Rubra perto de você.</p>
+      <div class="ctas">
+        <a class="btn solid" href="#">Onde comprar →</a>
+        <a class="btn" href="#">Conheça os sabores</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>© Rubra Bebidas — Abra. Sinta.</span>
+  <span>Marca fictícia · projeto conceito</span>
+</footer>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const sm = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const PI = Math.PI;
+
+/* ---------- renderer ---------- */
+const canvas = document.getElementById('gl');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+} catch (e) {
+  document.getElementById('loadmsg').textContent = 'Seu navegador não conseguiu abrir o 3D';
+  throw e;
+}
+const mobile = Math.min(innerWidth, innerHeight) < 700;
+renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 1.75));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.05, 200);
+scene.add(camera);
+
+/* ---------- estúdio para reflexos (softboxes + painéis vermelhos) ---------- */
+const pmrem = new THREE.PMREMGenerator(renderer);
+const studio = new THREE.Scene();
+studio.background = new THREE.Color(0x010000);
+function softbox(w, h, rgb, pos) {
+  const m = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
+  m.color.setRGB(rgb[0], rgb[1], rgb[2]);
+  const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+  p.position.set(...pos); p.lookAt(0, 0, 0); studio.add(p);
+}
+softbox(9, 2.2, [6, 6, 6], [0, 8, 1.5]);          // softbox de cima
+softbox(0.8, 14, [9, 9, 9], [6, 0, 3.5]);         // faixa branca à direita
+softbox(0.45, 14, [5, 5, 5], [-6, 0, 2.5]);       // faixa fina à esquerda
+softbox(10, 10, [4, 0.12, 0.08], [-8, 0, -6]);    // painel vermelho
+softbox(10, 10, [3.4, 0.08, 0.05], [8, -1, -6]);  // painel vermelho
+softbox(16, 4, [1.6, 0.04, 0.03], [0, -7, -2]);   // rebatedor vermelho embaixo
+scene.environment = pmrem.fromScene(studio, 0.015).texture;
+
+/* ---------- fundo (brilho vermelho + feixe de luz) ---------- */
+const backU = {
+  uGlow: { value: 0 }, uRed: { value: 0 }, uBeam: { value: 0 }, uTime: { value: 0 },
+  uCenter: { value: new THREE.Vector2(0.5, 0.5) }, uAspect: { value: 1 }
+};
+const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+  uniforms: backU, depthWrite: false,
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    varying vec2 vUv;
+    uniform float uGlow, uRed, uBeam, uTime, uAspect; uniform vec2 uCenter;
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    void main(){
+      vec2 p = (vUv - uCenter) * vec2(uAspect, 1.0);
+      float d = length(p);
+      vec3 col = vec3(0.004, 0.0006, 0.0006);
+      col += vec3(0.10, 0.004, 0.006) * smoothstep(1.5, 0.0, d) * uGlow * 1.4;
+      col += vec3(0.85, 0.02, 0.03) * exp(-d * d * 6.0) * uGlow * (0.25 + 0.75 * uRed);
+      float beam = exp(-abs(p.x) * 6.0) * smoothstep(-0.35, 0.8, p.y) * uBeam;
+      col += vec3(1.0, 0.22, 0.16) * beam * 0.22 * uGlow;
+      col *= 1.0 - 0.45 * smoothstep(0.5, 1.4, length((vUv - 0.5) * vec2(uAspect, 1.0)));
+      col += (hash(vUv * 900.0 + uTime) - 0.5) * 0.004;
+      gl_FragColor = vec4(max(col, 0.0), 1.0);
+    }`
+}));
+backdrop.renderOrder = -10;
+backdrop.position.z = -80;
+camera.add(backdrop);
+
+/* ---------- texturas geradas ---------- */
+function canvasTex(w, h, draw, srgb) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+const frostTex = canvasTex(512, 512, (g, w, h) => {
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 9000; i++) {
+    const r = Math.pow(Math.random(), 3) * 2.4 + 0.3;
+    g.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.6})`;
+    g.beginPath(); g.arc(Math.random() * w, Math.random() * h, r, 0, PI * 2); g.fill();
+  }
+});
+frostTex.wrapS = frostTex.wrapT = THREE.RepeatWrapping;
+frostTex.repeat.set(6, 5);
+
+const bubbleTex = canvasTex(64, 64, g => {
+  g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 4; g.beginPath(); g.arc(32, 32, 24, 0, PI * 2); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(23, 22, 6, 0, PI * 2); g.fill();
+});
+const softTex = canvasTex(64, 64, g => {
+  const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(.35, 'rgba(255,255,255,.5)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+});
+const smokeTex = canvasTex(128, 128, g => {
+  for (let i = 0; i < 26; i++) {
+    const x = 64 + (Math.random() - .5) * 50, y = 64 + (Math.random() - .5) * 50, rr = 14 + Math.random() * 30;
+    const r = g.createRadialGradient(x, y, 0, x, y, rr);
+    r.addColorStop(0, 'rgba(255,255,255,.18)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 128, 128);
+  }
+});
+
+/* ---------- garrafa ---------- */
+const bottle = new THREE.Group();
+scene.add(bottle);
+
+const prof = [
+  [0.00,-2.00],[0.50,-2.00],[0.64,-1.985],[0.71,-1.94],[0.725,-1.82],[0.725,-0.6],[0.725,0.45],
+  [0.70,0.70],[0.60,0.98],[0.45,1.24],[0.33,1.46],[0.27,1.64],[0.262,1.80],[0.29,1.83],[0.29,1.91],[0.255,1.94]
+].map(p => new THREE.Vector2(p[0], p[1]));
+const profPts = new THREE.SplineCurve(prof).getPoints(170);
+function radiusAt(y) {
+  for (let i = 0; i < profPts.length - 1; i++) {
+    const a = profPts[i], b = profPts[i + 1];
+    if ((y >= a.y && y <= b.y) || (y <= a.y && y >= b.y)) return lerp(a.x, b.x, (y - a.y) / ((b.y - a.y) || 1));
+  }
+  return 0.725;
+}
+
+// vidro com refração real
+const glassGeo = new THREE.LatheGeometry(profPts, 160);
+const glassMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, metalness: 0, roughness: 0.035,
+  transmission: 1, ior: 1.5, thickness: 0.14,
+  attenuationColor: new THREE.Color(0xfff0ea), attenuationDistance: 2.5,
+  clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1,
+  envMapIntensity: 1.6, depthWrite: false
+});
+const glass = new THREE.Mesh(glassGeo, glassMat);
+bottle.add(glass);
+
+// película de condensação (vidro embaçado)
+const frostGeo = glassGeo.clone(); frostGeo.scale(1.006, 1, 1.006);
+const frostMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, roughness: 0.45, metalness: 0, transparent: true, opacity: 0.16,
+  alphaMap: frostTex, depthWrite: false, envMapIntensity: 1.2
+});
+const frost = new THREE.Mesh(frostGeo, frostMat); frost.renderOrder = 4;
+bottle.add(frost);
+
+// brilho de borda vermelho
+const rimMat = new THREE.ShaderMaterial({
+  uniforms: { uColor: { value: new THREE.Color(1.0, 0.12, 0.06) }, uI: { value: 0 } },
+  vertexShader: `varying vec3 vN; varying vec3 vV;
+    void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }`,
+  fragmentShader: `uniform vec3 uColor; uniform float uI; varying vec3 vN; varying vec3 vV;
+    void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 3.5); gl_FragColor = vec4(uColor * f * uI, f * uI); }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+});
+const rim = new THREE.Mesh(glassGeo, rimMat); rim.scale.set(1.012, 1, 1.012); rim.renderOrder = 6;
+bottle.add(rim);
+
+// líquido
+const liqProf = [
+  [0.00,-1.93],[0.58,-1.93],[0.66,-1.86],[0.668,-1.7],[0.668,0.42],[0.645,0.67],[0.55,0.94],[0.40,1.19],[0.30,1.36],[0.0,1.36]
+].map(p => new THREE.Vector2(p[0], p[1]));
+const liqMat = new THREE.MeshPhysicalMaterial({
+  color: 0x160301, roughness: 0.06, metalness: 0,
+  clearcoat: 1, clearcoatRoughness: 0.04,
+  sheen: 1, sheenColor: new THREE.Color(0xff2a0c), sheenRoughness: 0.32,
+  emissive: new THREE.Color(0x4a0a02), emissiveIntensity: 0.3,
+  envMapIntensity: 1.1, depthWrite: false
+});
+const liquid = new THREE.Mesh(new THREE.LatheGeometry(new THREE.SplineCurve(liqProf).getPoints(110), 128), liqMat);
+liquid.renderOrder = -1;
+bottle.add(liquid);
+
+// rótulo
+const lc = document.createElement('canvas'); lc.width = 2048; lc.height = 512;
+const lg = lc.getContext('2d');
+const labelTex = new THREE.CanvasTexture(lc);
+labelTex.colorSpace = THREE.SRGBColorSpace;
+labelTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+function drawLabel() {
+  const g = lg.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, '#c8102a'); g.addColorStop(.55, '#a00a20'); g.addColorStop(1, '#640512');
+  lg.fillStyle = g; lg.fillRect(0, 0, 2048, 512);
+  for (let i = 0; i < 26000; i++) {
+    lg.fillStyle = `rgba(${Math.random() < .5 ? '0,0,0' : '255,255,255'},${Math.random() * .05})`;
+    lg.fillRect(Math.random() * 2048, Math.random() * 512, 2, 2);
+  }
+  lg.fillStyle = 'rgba(255,236,226,.9)';
+  lg.fillRect(0, 30, 2048, 5); lg.fillRect(0, 477, 2048, 5);
+  lg.fillRect(0, 44, 2048, 1.5); lg.fillRect(0, 466, 2048, 1.5);
+  lg.textAlign = 'center'; lg.textBaseline = 'middle';
+  lg.fillStyle = '#fff5f0';
+  lg.font = 'italic 800 236px Fraunces, Georgia, serif';
+  lg.fillText('Rubra', 1024, 232);
+  lg.font = '700 34px Manrope, Arial, sans-serif';
+  lg.fillStyle = 'rgba(255,236,226,.82)';
+  lg.fillText('R E F R I G E R A N T E   ·   2 9 0  m l', 1024, 398);
+  lg.font = 'italic 600 62px Fraunces, Georgia, serif';
+  lg.fillStyle = 'rgba(255,236,226,.5)';
+  for (const x of [512, 1536]) lg.fillText('Abra. Sinta.', x, 256);
+  labelTex.needsUpdate = true;
+}
+drawLabel();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawLabel);
+const labelMat = new THREE.MeshPhysicalMaterial({ map: labelTex, roughness: 0.42, clearcoat: 0.6, clearcoatRoughness: 0.12, envMapIntensity: 0.9 });
+const label = new THREE.Mesh(new THREE.CylinderGeometry(0.737, 0.737, 1.12, 160, 1, true), labelMat);
+label.position.y = -0.62; label.rotation.y = PI;
+bottle.add(label);
+
+// tampa de metal com 21 dentes
+const capGeo = new THREE.CylinderGeometry(0.30, 0.312, 0.15, 168, 6, false);
+{
+  const pos = capGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), r = Math.hypot(x, z);
+    if (r > 0.2) {
+      const th = Math.atan2(x, z);
+      const skirt = clamp((0.06 - y) / 0.13, 0, 1);
+      const k = (r + Math.pow(Math.abs(Math.sin(th * 10.5)), 0.7) * 0.03 * skirt) / r;
+      pos.setX(i, x * k); pos.setZ(i, z * k);
+    }
+  }
+  capGeo.computeVertexNormals();
+}
+const capMat = new THREE.MeshPhysicalMaterial({ color: 0xb80d1e, metalness: 0.9, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.06, envMapIntensity: 1.8 });
+const cap = new THREE.Mesh(capGeo, capMat);
+const capHome = new THREE.Vector3(0, 1.995, 0);
+cap.position.copy(capHome);
+bottle.add(cap);
+
+/* ---------- gotas de condensação (refratam o que está atrás) ---------- */
+const dropGeo = new THREE.SphereGeometry(1, 16, 12);
+const dropMat = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff, metalness: 0, roughness: 0, transmission: 1, ior: 1.33, thickness: 0.05,
+  clearcoat: 1, envMapIntensity: 2.4, specularIntensity: 1
+});
+const DROPS = mobile ? 700 : 1100;
+const drops = new THREE.InstancedMesh(dropGeo, dropMat, DROPS);
+const dummy = new THREE.Object3D();
+function placeOnSurface(o, th, y, s, sy, sz) {
+  const onLabel = y > -1.18 && y < -0.06;
+  const r = (onLabel ? 0.741 : radiusAt(y)) + s * 0.25;
+  o.position.set(Math.sin(th) * r, y, Math.cos(th) * r);
+  o.lookAt(Math.sin(th) * 6, y, Math.cos(th) * 6);
+  o.scale.set(s, s * sy, s * sz);
+  o.updateMatrix();
+}
+for (let i = 0; i < DROPS; i++) {
+  const y = lerp(-1.9, 0.95, Math.random());
+  const s = Math.pow(Math.random(), 2.4) * 0.03 + 0.006;
+  placeOnSurface(dummy, Math.random() * PI * 2, y, s, 1 + Math.random() * 0.5, 0.42);
+  drops.setMatrixAt(i, dummy.matrix);
+}
+bottle.add(drops);
+
+const SLIDE = 40;
+const slides = new THREE.InstancedMesh(dropGeo, dropMat, SLIDE);
+const slideData = Array.from({ length: SLIDE }, () => ({ th: Math.random() * PI * 2, off: Math.random() * 10, sp: 0.5 + Math.random() * 0.9, s: 0.02 + Math.random() * 0.016 }));
+bottle.add(slides);
+
+/* ---------- bolhas dentro do líquido ---------- */
+const BUB = 420;
+const bubPos = new Float32Array(BUB * 3), bubSp = new Float32Array(BUB);
+function seedBubble(i, anyY) {
+  const a = Math.random() * PI * 2, r = Math.sqrt(Math.random()) * 0.6;
+  bubPos[i * 3] = Math.sin(a) * r; bubPos[i * 3 + 2] = Math.cos(a) * r;
+  bubPos[i * 3 + 1] = anyY ? lerp(-1.9, 0.55, Math.random()) : -1.9;
+  bubSp[i] = 0.15 + Math.random() * 0.5;
+}
+for (let i = 0; i < BUB; i++) seedBubble(i, true);
+const bubGeo = new THREE.BufferGeometry(); bubGeo.setAttribute('position', new THREE.BufferAttribute(bubPos, 3));
+const bubMat = new THREE.PointsMaterial({ size: 0.026, map: bubbleTex, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffcfbf });
+const bubbles = new THREE.Points(bubGeo, bubMat); bubbles.renderOrder = 3;
+bottle.add(bubbles);
+
+// bolhas grudadas na parede de dentro
+const CLING = 260, clPos = new Float32Array(CLING * 3);
+for (let i = 0; i < CLING; i++) {
+  const y = lerp(-1.85, 0.4, Math.random()), a = Math.random() * PI * 2, r = 0.655;
+  clPos[i * 3] = Math.sin(a) * r; clPos[i * 3 + 1] = y; clPos[i * 3 + 2] = Math.cos(a) * r;
+}
+const clGeo = new THREE.BufferGeometry(); clGeo.setAttribute('position', new THREE.BufferAttribute(clPos, 3));
+const clMat = new THREE.PointsMaterial({ size: 0.018, map: bubbleTex, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffd9cc });
+const cling = new THREE.Points(clGeo, clMat); cling.renderOrder = 3;
+bottle.add(cling);
+
+/* ---------- partículas de energia, poeira e névoa ---------- */
+const PART = mobile ? 900 : 1500;
+const pPos = new Float32Array(PART * 3), pCol = new Float32Array(PART * 3), pSp = new Float32Array(PART);
+for (let i = 0; i < PART; i++) {
+  const a = Math.random() * PI * 2, r = 1.15 + Math.pow(Math.random(), 0.7) * 5;
+  pPos[i * 3] = Math.sin(a) * r; pPos[i * 3 + 1] = lerp(-5, 5, Math.random()); pPos[i * 3 + 2] = Math.cos(a) * r;
+  pSp[i] = 0.05 + Math.random() * 0.25;
+  const red = Math.random() < 0.55;
+  pCol[i * 3] = 1; pCol[i * 3 + 1] = red ? 0.22 : 0.9; pCol[i * 3 + 2] = red ? 0.18 : 0.86;
+}
+const partGeo = new THREE.BufferGeometry();
+partGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+partGeo.setAttribute('color', new THREE.BufferAttribute(pCol, 3));
+const partMat = new THREE.PointsMaterial({ size: 0.045, map: bubbleTex, vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+const particles = new THREE.Points(partGeo, partMat);
+scene.add(particles);
+
+const DUST = 900, dPos = new Float32Array(DUST * 3);
+for (let i = 0; i < DUST; i++) { dPos[i * 3] = lerp(-7, 7, Math.random()); dPos[i * 3 + 1] = lerp(-5, 5, Math.random()); dPos[i * 3 + 2] = lerp(-6, 4, Math.random()); }
+const dustGeo = new THREE.BufferGeometry(); dustGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+const dustMat = new THREE.PointsMaterial({ size: 0.02, map: softTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffb0a0 });
+const dust = new THREE.Points(dustGeo, dustMat);
+scene.add(dust);
+
+// estouro de gás na abertura
+const BURST = 480, bPos = new Float32Array(BURST * 3), bDir = [];
+for (let i = 0; i < BURST; i++) {
+  const v = new THREE.Vector3((Math.random() - .5) * 0.9, 0.8 + Math.random() * 1.5, (Math.random() - .5) * 0.9);
+  bDir.push(v.normalize().multiplyScalar(0.5 + Math.random() * 2.3));
+}
+const burstGeo = new THREE.BufferGeometry(); burstGeo.setAttribute('position', new THREE.BufferAttribute(bPos, 3));
+const burstMat = new THREE.PointsMaterial({ size: 0.03, map: softTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xffeae4 });
+const burst = new THREE.Points(burstGeo, burstMat); burst.renderOrder = 8;
+bottle.add(burst);
+
+// vapor gelado saindo do gargalo
+const vapors = [];
+for (let i = 0; i < 9; i++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, opacity: 0, depthWrite: false, color: 0xffe9e6 }));
+  s.userData = { dx: (Math.random() - .5) * 0.7, dy: 0.6 + Math.random() * 1.2, ph: Math.random() * PI * 2, d: i / 9 };
+  bottle.add(s); vapors.push(s);
+}
+
+/* ---------- luzes ---------- */
+const amb = new THREE.AmbientLight(0x2a0505, 0.3); scene.add(amb);
+const key = new THREE.DirectionalLight(0xfff2ec, 0); key.position.set(2.5, 4, 5); scene.add(key);
+const rimL = new THREE.SpotLight(0xff1a12, 0, 0, 0.55, 0.7, 2); rimL.position.set(-4.5, 3, -3); rimL.target = bottle; scene.add(rimL);
+const rimR = new THREE.SpotLight(0xff3a18, 0, 0, 0.55, 0.7, 2); rimR.position.set(4.5, 0.5, -2.5); rimR.target = bottle; scene.add(rimR);
+const back = new THREE.PointLight(0xff2a0a, 0, 0, 2); back.position.set(0, -0.2, -1.4); scene.add(back);
+const top = new THREE.SpotLight(0xffffff, 0, 0, 0.4, 0.8, 2); top.position.set(0, 7, 2); top.target = bottle; scene.add(top);
+
+/* ---------- pós-produção: brilho de cinema ---------- */
+const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.55, 0.85);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ---------- roteiro de câmera (6 cenas) ---------- */
+const keys = [
+  { p: 0.00, pos: [0, 0.4, 12.5], look: [0, 0, 0], rot: PI * 1.00 },
+  { p: 0.13, pos: [0, 0.25, 8.6], look: [0, 0, 0], rot: PI * 1.15 },
+  { p: 0.29, pos: [2.7, 0.8, 5.8], look: [0, 0.1, 0], rot: PI * 1.80 },
+  { p: 0.45, pos: [0.8, 0.45, 1.85], look: [0, 0.25, 0], rot: PI * 2.40 },
+  { p: 0.58, pos: [-3.3, 0.9, 6.4], look: [0, 0.15, 0], rot: PI * 3.00 },
+  { p: 0.70, pos: [-1.4, 1.1, 7.6], look: [0, 0.6, 0], rot: PI * 3.35 },
+  { p: 0.83, pos: [0.2, 1.3, 7.4], look: [0, 0.9, 0], rot: PI * 3.70 },
+  { p: 1.00, pos: [0, 0.2, 9.6], look: [0, 0.1, 0], rot: PI * 4.00 }
+];
+const posCurve = new THREE.CatmullRomCurve3(keys.map(k => new THREE.Vector3(...k.pos)), false, 'centripetal');
+const lookCurve = new THREE.CatmullRomCurve3(keys.map(k => new THREE.Vector3(...k.look)), false, 'centripetal');
+function keyU(p) {
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (p <= keys[i + 1].p) {
+      const t = (p - keys[i].p) / (keys[i + 1].p - keys[i].p);
+      return { u: (i + t) / (keys.length - 1), rot: lerp(keys[i].rot, keys[i + 1].rot, sm(0, 1, t) * 0.5 + t * 0.5) };
+    }
+  }
+  return { u: 1, rot: keys[keys.length - 1].rot };
+}
+
+/* ---------- scroll e interface ---------- */
+let target = 0, cur = 0;
+window.__rubraJump = p => { target = cur = p; };
+const progressEl = document.getElementById('progress');
+const hint = document.getElementById('hint');
+const dots = [...document.querySelectorAll('.dot')];
+const ranges = [0.14, 0.32, 0.5, 0.66, 0.84, 1.01];
+function onScroll() {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  target = clamp(scrollY / (max || 1), 0, 1);
+}
+addEventListener('scroll', onScroll, { passive: true });
+
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('in')), { threshold: 0.3 });
+document.querySelectorAll('.copy').forEach((c, i) => { if (i) c.classList.add('pre'); io.observe(c); });
+
+function sizeBackdrop() {
+  const h = 2 * 80 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * 1.02;
+  backdrop.scale.set(h * camera.aspect, h, 1);
+  backU.uAspect.value = camera.aspect;
+}
+function resize() {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  sizeBackdrop(); onScroll();
+}
+addEventListener('resize', resize);
+sizeBackdrop();
+
+/* ---------- loop ---------- */
+const clock = new THREE.Clock();
+const vPos = new THREE.Vector3(), vLook = new THREE.Vector3(), dir = new THREE.Vector3(), side = new THREE.Vector3(), proj = new THREE.Vector3();
+let first = true;
+
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  cur += (target - cur) * (1 - Math.pow(0.0015, dt));
+  const p = cur;
+
+  // câmera
+  const k = keyU(p);
+  posCurve.getPoint(k.u, vPos); lookCurve.getPoint(k.u, vLook);
+  const wide = camera.aspect > 1.15, tall = camera.aspect < 0.9;
+  const dist = vPos.distanceTo(vLook);
+  dir.subVectors(vLook, vPos).normalize();
+  side.crossVectors(dir, camera.up).normalize();
+  if (wide) { const s = -0.2 * dist * (1 - sm(0.9, 1, p) * 0.3); vPos.addScaledVector(side, s); vLook.addScaledVector(side, s); }
+  if (tall) { const s = -0.13 * dist; vPos.y += s; vLook.y += s; }
+  camera.position.copy(vPos); camera.lookAt(vLook);
+
+  // garrafa flutuando
+  bottle.rotation.y = k.rot + Math.sin(t * 0.4) * 0.03;
+  bottle.position.y = Math.sin(t * 0.7) * 0.05;
+  bottle.rotation.z = Math.sin(t * 0.5) * 0.012;
+
+  // intensidade de cada cena
+  const L = 0.05 + 0.95 * sm(0.0, 0.15, p);
+  const macro = sm(0.36, 0.45, p) * (1 - sm(0.5, 0.58, p));
+  const energy = sm(0.5, 0.64, p);
+  const open = sm(0.74, 0.8, p);
+  const hero = sm(0.86, 1, p);
+  const red = 0.35 + 0.65 * energy;
+  const tb = clamp((p - 0.745) / 0.11, 0, 1);
+
+  key.intensity = (0.5 + macro * 1.4 + hero * 0.5) * L;
+  top.intensity = (40 + macro * 60 + hero * 30) * L;
+  rimL.intensity = (60 + red * 140) * L;
+  rimR.intensity = (40 + red * 110) * L;
+  back.intensity = (5 + red * 10 + macro * 6) * L;
+  amb.intensity = 0.15 + 0.3 * L;
+  glassMat.envMapIntensity = 1.6 * L + macro * 0.6;
+  frostMat.envMapIntensity = 1.2 * L;
+  labelMat.envMapIntensity = 0.9 * L;
+  capMat.envMapIntensity = 1.8 * L;
+  dropMat.envMapIntensity = 2.4 * L + macro * 1.2;
+  liqMat.envMapIntensity = 1.1 * L;
+  liqMat.emissiveIntensity = (0.15 + red * 0.35 + macro * 0.4) * L;
+  rimMat.uniforms.uI.value = (0.25 + red * 0.7) * L;
+  renderer.toneMappingExposure = 0.85 + 0.25 * L + macro * 0.12;
+  bloom.strength = 0.3 + energy * 0.22 + macro * 0.12 + Math.sin(tb * PI) * 0.35;
+
+  backU.uGlow.value = L; backU.uRed.value = red; backU.uBeam.value = 0.4 + 0.6 * hero; backU.uTime.value = t;
+  proj.set(0, 0.1, 0).project(camera);
+  backU.uCenter.value.set(proj.x * 0.5 + 0.5, proj.y * 0.5 + 0.5);
+
+  // bolhas
+  const bubSpeed = 0.6 + energy * 1.4 + macro * 0.3;
+  for (let i = 0; i < BUB; i++) {
+    bubPos[i * 3 + 1] += bubSp[i] * bubSpeed * dt;
+    bubPos[i * 3] += Math.sin(t * 3 + i) * 0.0005;
+    if (bubPos[i * 3 + 1] > 0.6) seedBubble(i, false);
+  }
+  bubGeo.attributes.position.needsUpdate = true;
+  bubMat.opacity = 0.5 * L; clMat.opacity = 0.4 * L;
+  bubMat.size = 0.024 + macro * 0.008;
+
+  // gotas escorrendo
+  for (let i = 0; i < SLIDE; i++) {
+    const d = slideData[i];
+    const y = 0.85 - ((t * 0.06 * d.sp + d.off) % 2.8);
+    placeOnSurface(dummy, d.th, y, d.s, 1.9, 0.45);
+    slides.setMatrixAt(i, dummy.matrix);
+  }
+  slides.instanceMatrix.needsUpdate = true;
+
+  // partículas em volta
+  for (let i = 0; i < PART; i++) {
+    pPos[i * 3 + 1] += pSp[i] * dt * (0.4 + energy * 1.2);
+    if (pPos[i * 3 + 1] > 5) pPos[i * 3 + 1] = -5;
+  }
+  partGeo.attributes.position.needsUpdate = true;
+  particles.rotation.y = t * 0.03;
+  partMat.opacity = energy * 0.7 * L;
+  dustMat.opacity = (0.12 + energy * 0.45) * L;
+  dust.rotation.y = t * 0.01;
+
+  // tampa abrindo
+  cap.position.set(capHome.x + open * 0.9, capHome.y + open * 3.2 + Math.sin(open * PI) * 0.3, capHome.z + open * 0.6);
+  cap.rotation.set(open * 2.6, open * 1.4, open * 1.9);
+
+  // estouro de gás
+  for (let i = 0; i < BURST; i++) {
+    const v = bDir[i], e = tb * (0.6 + (i % 7) * 0.08);
+    bPos[i * 3] = v.x * e; bPos[i * 3 + 1] = 1.95 + v.y * e - 0.5 * e * e; bPos[i * 3 + 2] = v.z * e;
+  }
+  burstGeo.attributes.position.needsUpdate = true;
+  burstMat.opacity = Math.sin(tb * PI) * 0.85;
+
+  // vapor depois de aberta
+  const vap = sm(0.76, 0.84, p);
+  vapors.forEach((s, i) => {
+    const u = s.userData, cyc = ((t * 0.12 + u.d) % 1);
+    s.position.set(u.dx * cyc + Math.sin(t + u.ph) * 0.05, 1.98 + u.dy * cyc, Math.cos(t * 0.7 + u.ph) * 0.1);
+    s.scale.setScalar(0.25 + cyc * 0.9);
+    s.material.opacity = vap * Math.sin(cyc * PI) * 0.22 * L;
+  });
+
+  // interface
+  progressEl.style.width = (p * 100).toFixed(2) + '%';
+  hint.style.opacity = p > 0.02 ? 0 : 1;
+  const idx = ranges.findIndex(r => p < r);
+  dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+
+  composer.render(dt);
+  if (first) { first = false; setTimeout(() => document.getElementById('loader').classList.add('done'), 300); }
+  requestAnimationFrame(frame);
+}
+onScroll();
+requestAnimationFrame(frame);
+</script>
