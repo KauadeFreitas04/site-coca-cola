@@ -6,7 +6,7 @@ import { Magnet } from './Effects.jsx';
 // preso (sticky) enquanto o scroll avança os quadros do comercial. Depois dela a página rola normal.
 const FRAMES = 385;
 const portrait = () => innerWidth / innerHeight < 0.9;
-const src = (set, i) => `/frames/${set}/f_${String(i + 1).padStart(4, '0')}.webp`;
+const src = (set, i) => `${import.meta.env.BASE_URL}frames/${set}/f_${String(i + 1).padStart(4, '0')}.webp`;
 // Ponto do quadro que fica no centro quando a tela corta o vídeo (a garrafa fica um pouco à direita).
 const FOCUS_X = 0.54;
 

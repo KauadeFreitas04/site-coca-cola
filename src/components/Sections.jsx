@@ -113,7 +113,7 @@ export function Band() {
   const [ref, visible] = useReveal(0.3);
   return (
     <section className="band" ref={ref}>
-      <video src="/video/band.mp4" autoPlay muted loop playsInline preload="metadata" />
+      <video src={import.meta.env.BASE_URL + 'video/band.mp4'} autoPlay muted loop playsInline preload="metadata" />
       <div className="band-shade" />
       <div className={'band-copy reveal' + (visible ? ' in' : '')}>
         <div className="tag">Psssst</div>
